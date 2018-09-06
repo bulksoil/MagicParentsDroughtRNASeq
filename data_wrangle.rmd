@@ -42,11 +42,14 @@ ctTable <-  at_data %>%
   filter(Trt == "T" | Trt == "C") %>% 
   widen(otus = "Geneid", value = "count", return_df = T) %>% 
   t()
+
+ctTable %>% write_rds("~/At/Eugene/Analysis/data/countTable.rds")
 ctMeta <- metadata %>% 
   filter(Trt == "T" | Trt == "C") %>% 
   separate(Genotype, into = c("Genotype", "Rep"), sep = "-") %>% 
   as.data.frame()
 row.names(ctMeta) <- ctMeta$SampleID
 ctMeta <- ctMeta[match(colnames(ctTable), row.names(ctMeta)),]
+ctMeta %>% write_rds("~/At/Eugene/Analysis/data/metadata.rds")
 ```
 
