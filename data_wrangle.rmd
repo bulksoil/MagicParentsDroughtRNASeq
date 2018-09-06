@@ -1,0 +1,52 @@
+---
+title: "A. thaliana PEG tag-seq data wrangle"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(tidyMB)
+```
+
+```{r}
+setwd("~/At/Eugene/PEG/")
+```
+
+```{r}
+metadata <- read_tsv("at_metadata.tsv")
+ctFiles <- dir(pattern = '*.tab')
+ct_read <- function(data){
+  f <- readr::read_tsv(data, comment = "#")
+  names(f)[7] <- "count"
+  f$file <- data
+  return(f)
+}
+at_data <- ctFiles %>% 
+  map(ct_read) %>% 
+  reduce(rbind) %>% 
+  separate(file, into = c("Run", "SeqType", "Pool", "Genotype", "Lab", "Nothing1", "Nothing2", "Nothing3"), sep = "_") %>% 
+  mutate(SampleID = paste(Pool, Genotype, sep = "")) %>% 
+  select(-Nothing1, -Nothing2, -Nothing3, -Lab) %>% 
+  inner_join(metadata, by = c("SampleID", "Genotype", "Pool"))
+```
+
+```{r}
+at_data <- at_data %>% 
+  group_by(SampleID) %>% 
+  mutate(depth = sum(count), RA = 1000 * (count / depth)) %>% 
+  separate(Genotype, into = c("Genotype", "Replicate"), sep = "-")
+```
+
+```{r}
+ctTable <-  at_data %>% 
+  filter(Trt == "T" | Trt == "C") %>% 
+  widen(otus = "Geneid", value = "count", return_df = T) %>% 
+  t()
+ctMeta <- metadata %>% 
+  filter(Trt == "T" | Trt == "C") %>% 
+  separate(Genotype, into = c("Genotype", "Rep"), sep = "-") %>% 
+  as.data.frame()
+row.names(ctMeta) <- ctMeta$SampleID
+ctMeta <- ctMeta[match(colnames(ctTable), row.names(ctMeta)),]
+```
+
