@@ -21,7 +21,9 @@ dds <- DESeqDataSetFromMatrix(countData = ctTable, colData = ctMeta, design = ~ 
 
 keepers <- rowSums(counts(dds)) >= 30
 dds <- dds[keepers,]
-dds <- DESeq(dds, test = "LRT", reduced = ~Trt + Genotype)
+dds_gxe <- DESeq(dds, test = "LRT", reduced = ~Trt + Genotype)
+dds_g <- DESeq(dds, test = "LRT", reduced = ~Trt + Trt:Genotype)
+dds_e <- DESeq(dds, test = "LRT", reduced = ~Genotype + Trt:Genotype)
 ```
 
 ```{r}
