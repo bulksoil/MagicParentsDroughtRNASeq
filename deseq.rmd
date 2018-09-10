@@ -14,6 +14,7 @@ In the data_wrangle.rmd script I put all of the count tables and metadata tables
 ```{r}
 ctData <- readRDS("~/At/Eugene/Analysis/data/countTable.rds")
 ctMeta <- readRDS("~/At/Eugene/Analysis/data/metadata.rds")
+peaks <- read_tsv("~/At/Eugene/Analysis/data/peaks.tsv")
 ```
 
 
@@ -33,14 +34,24 @@ dds_noInteraction <- DESeq(dds_noInteraction)
 ```
 
 ```{r}
+plotPCA(rld, intgroup = "Genotype", "Trt")
+```
+
+
+```{r}
 gxe_res <- results(dds_gxe, pAdjustMethod = "bon")
 gxe_genes <- gxe_res %>% 
   as.data.frame() %>% 
   rownames_to_column("Geneid") %>% 
   arrange(padj) %>% 
-  filter(padj <= 0.0001) %>% 
-  filter(abs(log2FoldChange) > 2)
+  filter(padj <= 0.05) 
 ```
+
+```{r}
+gxe_genes %>% 
+  inner_join(peaks, by = "Geneid")
+```
+
 
 ```{r}
 vsdC <- assay(rld) %>% 
@@ -48,7 +59,23 @@ vsdC <- assay(rld) %>%
   rownames_to_column("Geneid") %>% 
   gather(key = "SampleID", value = counts, -Geneid) %>% 
   inner_join(ctMeta, by = "SampleID")
+```
 
+```{r}
+gxe_genes %>% 
+  inner_join(peaks, by = "Geneid") %>% 
+  inner_join(vsdC, by = "Geneid") %>% 
+  group_by(Trt, Genotype, Geneid) %>% 
+  summarise(meanV = mean(counts), se = sd(counts)/sqrt(n())) %>% 
+  filter(Genotype %in% c("No", "Wu", "Hi")) %>% 
+  ggplot(aes(Trt, meanV, group = Genotype, color = Genotype)) +
+  geom_line() +
+  geom_point(color = 'black') +
+  facet_wrap(~Geneid, scales = "free", nrow = 1)
+```
+
+
+```{r}
 mean_values_gxe <- vsdC %>% 
   inner_join(gxe_genes %>% select(Geneid, padj), by = "Geneid") %>% 
   group_by(Genotype, Trt, Geneid) %>% 
