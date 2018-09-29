@@ -14,6 +14,7 @@ In the data_wrangle.rmd script I put all of the count tables and metadata tables
 ```{r}
 ctData <- readRDS("~/At/Eugene/Analysis/data/countTable.rds")
 ctMeta <- readRDS("~/At/Eugene/Analysis/data/metadata.rds")
+rld <- readRDS("data/rld_count_table.rds")
 peaks <- read_tsv("~/At/Eugene/Analysis/data/peaks.tsv")
 ```
 
@@ -21,7 +22,6 @@ peaks <- read_tsv("~/At/Eugene/Analysis/data/peaks.tsv")
 ## Making the DESeq Object
 From my understanding, DESeq can directly test for interactions between experimental variables by comparing a reduced model to a full model. The downside to this is that the full model cannot directly test for genes that are affected by one variable and control for another. For example, with a model `~ Genotype + Trt + Genotype:Trt` and a reduced model of `~ Genotype + Trt` DESeq can find genes that show a genotype by treatment interaction. Unfortunately if I were to try to find genes that are affected by just Trt while controlling for Genotype and the Genotype x Treatment interaction, then it would only return the genes affected by treamtment in the first level of the Genotype factor. In this case, we would only be finding genes that are differentially expressed in the genotype Bur (since it is the first level of the Genotype factor). So, I'm making two models. I am interested in the genes showing a genotype x treatment interaction, but I am also interested in finding genes that are affected by genotype and treatment. One model can test for the interaction, and one can test for the genotype or trt effects.
 ```{r}
-library(DESeq2)
 dds <- DESeqDataSetFromMatrix(countData = ctTable, colData = ctMeta, design = ~ Genotype + Trt + Genotype:Trt)
 dds_noInteraction <- DESeqDataSetFromMatrix(countData = ctTable, colData = ctMeta, design = ~Genotype + Trt)
 
@@ -34,9 +34,12 @@ dds_noInteraction <- DESeq(dds_noInteraction)
 ```
 
 ```{r}
-plotPCA(rld, intgroup = "Genotype", "Trt")
+plotPCA(rld, intgroup = c("Trt"))
 ```
 
+```{r}
+plotPCA(rld, intgroup = c("Trt", "Genotype"))
+```
 
 ```{r}
 gxe_res <- results(dds_gxe, pAdjustMethod = "bon")
